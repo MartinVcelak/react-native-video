@@ -299,11 +299,18 @@ public class ReactVideoView extends ScalableVideoView implements
                  */
                 setDataSource(mThemedReactContext, parsedUrl, headers);
             } else if (isAsset) {
-                if (uriString.startsWith("content://")) {
-                    Uri parsedUrl = Uri.parse(uriString);
-                    setDataSource(mThemedReactContext, parsedUrl);
-                } else {
-                    setDataSource(uriString);
+                Uri uri = Uri.parse(uriString);
+
+                try {
+                    AssetFileDescriptor fd = mThemedReactContext.getAssets().openFd(uri.getHost() + uri.getPath());
+                    setDataSource(fd.getFileDescriptor(), fd.getStartOffset(), fd.getLength());
+                }
+                catch(Exception e) {
+                    if (uriString.startsWith("file://")) {
+                        setDataSource(mThemedReactContext, uri);
+                    } else {
+                        setDataSource(uriString);
+                    }
                 }
             } else {
                 ZipResourceFile expansionFile= null;
@@ -402,7 +409,7 @@ public class ReactVideoView extends ScalableVideoView implements
             if (!mMediaPlayer.isPlaying()) {
                 start();
                 // Setting the rate unpauses, so we have to wait for an unpause
-                if (mRate != mActiveRate) { 
+                if (mRate != mActiveRate) {
                     setRateModifier(mRate);
                 }
 
@@ -677,7 +684,7 @@ public class ReactVideoView extends ScalableVideoView implements
             setKeepScreenOn(false);
         }
     }
-        
+
     // This is not fully tested and does not work for all forms of timed metadata
     @TargetApi(23) // 6.0
     public class TimedMetaDataAvailableListener
@@ -777,7 +784,7 @@ public class ReactVideoView extends ScalableVideoView implements
 
         return result;
     }
-        
+
     // Select track (so we can use it to listen to timed meta data updates)
     private void selectTimedMetadataTrack(MediaPlayer mp) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
